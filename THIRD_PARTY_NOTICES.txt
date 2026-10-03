@@ -1,0 +1,18 @@
+PTH PDF Editor — Third-Party Open Source Notices
+
+This project uses the following third-party open-source software:
+
+1. PDF.js
+Copyright Mozilla Foundation and individual contributors.
+Licensed under the Apache License, Version 2.0.
+Project: https://github.com/mozilla/pdf.js
+License: https://www.apache.org/licenses/LICENSE-2.0
+
+2. pdf-lib
+Copyright (c) Andrew Dillon.
+Licensed under the MIT License.
+Project: https://github.com/Hopding/pdf-lib
+License: https://github.com/Hopding/pdf-lib/blob/master/LICENSE.md
+
+PTH PDF Editor's original application code and interface are separate from these third-party projects.
+No Mozilla, PDF.js, pdf-lib, Adobe, or Acrobat trademarks or logos are used to brand this application.
