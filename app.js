@@ -8,7 +8,38 @@ async function render(){pagesEl.innerHTML='';thumbs.innerHTML=''; for(let n=1;n<
 const tv=p.getViewport({scale:.22});const tc=document.createElement('canvas');tc.width=tv.width;tc.height=tv.height;await p.render({canvasContext:tc.getContext('2d'),viewport:tv}).promise;const t=document.createElement('div');t.className='thumb';t.append(tc);t.insertAdjacentHTML('beforeend',`<div>Page ${n}</div>`);t.onclick=()=>wrap.scrollIntoView({behavior:'smooth',block:'start'});thumbs.append(t)}}
 function saveUndo(){undo.push(JSON.stringify(objects));if(undo.length>30)undo.shift()}
 function bindOverlay(ov,page,vp){let sx,sy,temp; ov.onpointerdown=e=>{if(tool==='select'||tool==='erase')return; const r=ov.getBoundingClientRect();sx=e.clientX-r.left;sy=e.clientY-r.top;if(tool==='text'){const txt=prompt('Enter text');if(txt){saveUndo();objects.push({type:'text',page,x:sx/vp.width,y:sy/vp.height,w:.3,h:.04,text:txt});render()}return} if(tool==='sign'){openSign(()=>{saveUndo();objects.push({type:'sign',page,x:sx/vp.width,y:sy/vp.height,w:.25,h:.08,data:signature});render()});return} if(tool==='redact'){const cv=ov.previousElementSibling,ctx=cv&&cv.getContext?cv.getContext('2d'):null;if(ctx){const px=Math.max(0,Math.min(cv.width-1,Math.round(sx))),py=Math.max(0,Math.min(cv.height-1,Math.round(sy))),d=ctx.getImageData(px,py,1,1).data;sampledColor=`rgb(${d[0]},${d[1]},${d[2]})`}} saveUndo();temp={type:tool,page,x:sx/vp.width,y:sy/vp.height,w:0,h:0,color:tool==='redact'?sampledColor:null};objects.push(temp);ov.setPointerCapture(e.pointerId)}; ov.onpointermove=e=>{if(!temp)return;const r=ov.getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top;temp.w=(x-sx)/vp.width;temp.h=(y-sy)/vp.height;drawObjects(ov,page,vp)};ov.onpointerup=()=>{if(temp){if(temp.w<0){temp.x+=temp.w;temp.w=Math.abs(temp.w)}if(temp.h<0){temp.y+=temp.h;temp.h=Math.abs(temp.h)}if(Math.abs(temp.w)<.005||Math.abs(temp.h)<.005)objects.pop()}temp=null}}
-function drawPdfText(ov,page,vp,p){const base=p.getViewport({scale:1}),sx=vp.width/base.width,sy=vp.height/base.height;(textItems[page]||[]).forEach(t=>{if(!t.str.trim())return;const d=document.createElement('div');d.className='pdftext';d.textContent=t.str;d.title='Tap to edit text';Object.assign(d.style,{position:'absolute',left:(t.x*sx)+'px',top:(vp.height-(t.y+t.h)*sy)+'px',fontSize:Math.max(8,t.h*sy)+'px',lineHeight:'1',cursor:'text',color:'transparent',border:'1px solid transparent',zIndex:'2'});d.onclick=e=>{if(tool==='erase'){e.stopPropagation();return}if(tool!=='select')return;e.stopPropagation();const val=prompt('Edit text',t.str);if(val===null||val===t.str)return;saveUndo();const cv=ov.previousElementSibling,ctx=cv&&cv.getContext?cv.getContext('2d'):null;let bg='rgb(255,255,255)';if(ctx){const px=Math.max(0,Math.min(cv.width-1,Math.round(t.x*sx))),py=Math.max(0,Math.min(cv.height-1,Math.round(vp.height-(t.y+t.h)*sy)));const cd=ctx.getImageData(px,py,1,1).data;bg=`rgb(${cd[0]},${cd[1]},${cd[2]})`}objects.push({type:'replaceText',page,x:(t.x/base.width),y:((base.height-t.y-t.h)/base.height),w:Math.max((t.w+4)/base.width,.04),h:Math.max((t.h+4)/base.height,.02),text:val,size:t.h,bg});t.str='';render()};d.onmouseenter=()=>{if(tool==='select'){d.style.borderColor='#60a5fa';d.style.background='#dbeafe55'}};d.onmouseleave=()=>{d.style.borderColor='transparent';d.style.background='transparent'};ov.append(d)})}
+function drawPdfText(ov,page,vp,p){
+ const base=p.getViewport({scale:1}),sx=vp.width/base.width,sy=vp.height/base.height;
+ const items=(textItems[page]||[]).filter(t=>t.str.trim());
+ const lines=[];
+ items.forEach(t=>{
+   let line=lines.find(l=>Math.abs(l.y-t.y)<=Math.max(3,t.h*.45));
+   if(!line){line={y:t.y,items:[]};lines.push(line)}
+   line.items.push(t);
+ });
+ lines.forEach(line=>{
+   line.items.sort((a,b)=>a.x-b.x);
+   const x0=Math.min(...line.items.map(t=>t.x)), x1=Math.max(...line.items.map(t=>t.x+t.w));
+   const h=Math.max(...line.items.map(t=>t.h)), y=Math.min(...line.items.map(t=>t.y));
+   const original=line.items.map(t=>t.str).join(' ').replace(/\s+/g,' ').trim();
+   if(!original)return;
+   const d=document.createElement('div');d.className='pdftext';d.textContent=original;d.title='Tap to edit this line';
+   Object.assign(d.style,{position:'absolute',left:(x0*sx)+'px',top:(vp.height-(y+h)*sy)+'px',width:Math.max(12,(x1-x0)*sx)+'px',height:Math.max(14,h*sy*1.25)+'px',cursor:'text',color:'transparent',border:'1px solid transparent',zIndex:'3'});
+   d.onclick=e=>{
+     if(tool==='erase'){e.stopPropagation();return}
+     if(tool!=='select')return;e.stopPropagation();
+     const val=prompt('Edit text',original);if(val===null||val===original)return;
+     saveUndo();
+     const cv=ov.previousElementSibling,ctx=cv&&cv.getContext?cv.getContext('2d'):null;let bg='rgb(255,255,255)';
+     if(ctx){const px=Math.max(0,Math.min(cv.width-1,Math.round(x0*sx-2))),py=Math.max(0,Math.min(cv.height-1,Math.round(vp.height-(y+h)*sy-2)));const cd=ctx.getImageData(px,py,1,1).data;bg=`rgb(${cd[0]},${cd[1]},${cd[2]})`}
+     objects.push({type:'replaceText',page,x:Math.max(0,(x0-3)/base.width),y:Math.max(0,(base.height-y-h-3)/base.height),w:Math.min(1,(x1-x0+8)/base.width),h:Math.min(.12,(h+8)/base.height),text:val,size:h,bg});
+     line.items.forEach(t=>t.str='');render();
+   };
+   d.onmouseenter=()=>{if(tool==='select'){d.style.borderColor='#60a5fa';d.style.background='#dbeafe33'}};
+   d.onmouseleave=()=>{d.style.borderColor='transparent';d.style.background='transparent'};
+   ov.append(d);
+ });
+}
 function drawObjects(ov,page,vp){ov.querySelectorAll('.obj').forEach(x=>x.remove());objects.filter(o=>o.page===page).forEach((o,i)=>{const d=document.createElement(o.type==='sign'?'img':'div');d.className='obj '+(o.type==='redact'?'redact':(o.type==='text'||o.type==='replaceText')?'textobj':o.type==='sign'?'signature':'');let x=o.x*vp.width,y=o.y*vp.height,w=(o.w||.2)*vp.width,h=(o.h||.04)*vp.height;if(w<0){x+=w;w=-w}if(h<0){y+=h;h=-h}Object.assign(d.style,{left:x+'px',top:y+'px',width:Math.max(w,3)+'px',height:Math.max(h,3)+'px'});if(o.type==='redact')d.style.background=o.color||'#fff';if(o.type==='text'||o.type==='replaceText'){d.textContent=o.text;if(o.type==='replaceText'){d.style.background=o.bg||'#fff';d.style.zIndex='4'}d.style.fontSize=(o.type==='replaceText'?Math.max(8,(o.size||12)*1.35*zoom):Math.max(12,16*zoom))+'px';d.style.width='auto';d.style.height='auto'}if(o.type==='sign')d.src=o.data;if(o.type==='draw'){d.style.border='2px solid #111';d.style.borderRadius='50%'}d.onclick=e=>{if(tool==='select'||tool==='erase'){e.stopPropagation();saveUndo();objects.splice(objects.indexOf(o),1);render()}};ov.append(d)})}
 document.querySelectorAll('[data-tool]').forEach(b=>b.onclick=()=>{document.querySelectorAll('[data-tool]').forEach(x=>x.classList.remove('active'));b.classList.add('active');tool=b.dataset.tool});
 $('#zoomIn').onclick=()=>{zoom=Math.min(2,zoom+.15);$('#zoomLabel').textContent=Math.round(zoom*100)+'%';render()};$('#zoomOut').onclick=()=>{zoom=Math.max(.55,zoom-.15);$('#zoomLabel').textContent=Math.round(zoom*100)+'%';render()};$('#undoBtn').onclick=()=>{if(undo.length){objects=JSON.parse(undo.pop());render()}};
