@@ -2,7 +2,7 @@ import * as pdfjsLib from 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38
 import { PPDFDocumentModel } from './core/document-model.js';
 import { parseTextItems, parseOperatorList, linkRunsToOperators } from './core/content-parser.js';
 import { replacementMetrics } from './core/layout-engine.js';
-import { rewritePageLiteralEdits } from './core/direct-stream-writer.js';
+import { exportPPDF } from './core/exporter.js';
 pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.worker.min.mjs';
 const $=s=>document.querySelector(s), pagesEl=$('#pages'), thumbs=$('#thumbs'), file=$('#file');
 let pdf=null,bytes=null,zoom=1,tool='select',objects=[],history=[],selected=null,signature=null,pageModels={};
@@ -80,6 +80,9 @@ $('#fontSize').onchange=e=>{if(selected?.type==='replace'){snapshot();selected.s
 $('#textColor').oninput=e=>{if(selected?.type==='replace'){selected.textColor=e.target.value;render()}else if(selected?.type==='redact'){selected.fill=e.target.value;render()}};
 $('#deleteSelected').onclick=()=>{if(selected){snapshot();if(selected.contentRef)contentModel.removeEdit(selected.contentRef);objects=objects.filter(x=>x.id!==selected.id);setSelected(null);render()}};
 function openSign(done){const m=$('#signModal'),c=$('#signPad'),ctx=c.getContext('2d');m.classList.remove('hidden');ctx.clearRect(0,0,c.width,c.height);let d=false;const pos=e=>{const r=c.getBoundingClientRect();return[(e.clientX-r.left)*c.width/r.width,(e.clientY-r.top)*c.height/r.height]};c.onpointerdown=e=>{d=true;ctx.beginPath();ctx.moveTo(...pos(e));c.setPointerCapture(e.pointerId)};c.onpointermove=e=>{if(d){ctx.lineWidth=3;ctx.lineCap='round';ctx.lineTo(...pos(e));ctx.stroke()}};c.onpointerup=()=>d=false;$('#clearSign').onclick=()=>ctx.clearRect(0,0,c.width,c.height);$('#cancelSign').onclick=()=>m.classList.add('hidden');$('#useSign').onclick=()=>{signature=c.toDataURL();m.classList.add('hidden');done()}}
-$('#downloadBtn').onclick=async()=>{const {PDFDocument,rgb,StandardFonts}=PDFLib,doc=await PDFDocument.load(bytes.slice(0)),font=await doc.embedFont(StandardFonts.Helvetica),color=v=>{if(v?.[0]==='#'){const q=v.slice(1);return rgb(parseInt(q.slice(0,2),16)/255,parseInt(q.slice(2,4),16)/255,parseInt(q.slice(4,6),16)/255)}const m=(v||'255,255,255').match(/\d+/g)||[255,255,255];return rgb(+m[0]/255,+m[1]/255,+m[2]/255)};
- for(const o of objects){const p=doc.getPage(o.page-1),{width,height}=p.getSize(),x=o.x*width,h=o.h*height,w=o.w*width,y=height-o.y*height-h;if(o.type==='replace'){p.drawRectangle({x,y,width:w,height:h,color:color(o.bg)});p.drawText(o.text,{x:x+1,y:y+Math.max(1,(h-o.size)*.4),size:o.size,font,color:color(o.textColor)})}if(o.type==='erase')p.drawRectangle({x,y,width:w,height:h,color:color(o.bg)});if(o.type==='redact')p.drawRectangle({x,y,width:w,height:h,color:color(o.fill||'#111111')});if(o.type==='sign'){const im=await doc.embedPng(o.data);p.drawImage(im,{x,y,width:w,height:h})}}
- const out=await doc.save(),a=document.createElement('a'),url=URL.createObjectURL(new Blob([out],{type:'application/pdf'}));a.href=url;a.download='edited-document.pdf';a.click();setTimeout(()=>URL.revokeObjectURL(url),1500)};
+$('#downloadBtn').onclick=async()=>{
+ const result=await exportPPDF(bytes,objects);
+ if(!result.ok){alert('PPDF cannot safely edit the original text encoding on page '+result.failed.map(x=>x.page).join(', ')+'. Export stopped; no fake text overlay was used.');return}
+ const a=document.createElement('a'),url=URL.createObjectURL(new Blob([result.bytes],{type:'application/pdf'}));
+ a.href=url;a.download='edited-document.pdf';a.click();setTimeout(()=>URL.revokeObjectURL(url),1500);
+};
