@@ -119,3 +119,11 @@ main{height:calc(100vh - 200px)}#workspace{padding:132px 14%;background:#f6f8fb}
 #openBtn.fileBtn{display:inline-flex;align-items:center;justify-content:center;height:62px;border-radius:14px;padding:0 28px;font-size:18px;background:#fff;color:#172033;border:1px solid #dbe1ea}
 #welcomeOpen.fileBtn{height:66px;padding:0 34px;border-radius:14px;font-size:21px;font-weight:600;display:inline-flex;align-items:center;gap:14px;background:#2563eb;color:#fff;border:1px solid #2563eb}
 @media(max-width:700px){#openBtn.fileBtn{height:40px;padding:0 10px;font-size:13px;border-radius:10px}#welcomeOpen.fileBtn{height:56px;font-size:18px}}
+
+/* v2 object engine */
+.word-hit{position:absolute;z-index:6;background:transparent;cursor:text;border-radius:2px;touch-action:none}
+.word-hit:hover{outline:1px solid rgba(37,99,235,.35);background:rgba(37,99,235,.06)}
+.obj.replace{border:1px dashed transparent}
+.obj.erase,.obj.redact{border:0}
+.obj.selected{outline:2px solid #2563eb!important;outline-offset:2px}
+@media(max-width:700px){.word-hit:active{outline:2px solid rgba(37,99,235,.5);background:rgba(37,99,235,.08)}}
