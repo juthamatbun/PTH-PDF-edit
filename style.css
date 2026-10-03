@@ -1,2 +1,23 @@
 *{box-sizing:border-box}body{margin:0;font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#eef1f5;color:#1f2937;height:100vh;overflow:hidden}button{font:inherit;border:1px solid #d7dce3;background:#fff;border-radius:9px;padding:9px 13px;cursor:pointer}button:hover{background:#f5f7fa}.primary,#openBtn,#welcomeOpen{background:#2563eb;color:#fff;border-color:#2563eb}.ghost{background:#f8fafc}header{height:64px;background:#fff;border-bottom:1px solid #dfe3e8;display:flex;align-items:center;justify-content:space-between;padding:0 18px}.brand{font-size:20px}.brand b{color:#2563eb;margin-right:5px}.brand span{color:#64748b}.actions{display:flex;gap:8px}.toolbar{height:55px;background:#fff;border-bottom:1px solid #dfe3e8;display:flex;gap:7px;align-items:center;padding:8px 16px;overflow-x:auto;white-space:nowrap}.toolbar button.active{background:#e8f0ff;border-color:#9dbcf9;color:#174ea6}main{display:flex;height:calc(100vh - 119px)}aside{width:170px;background:#f8fafc;border-right:1px solid #d9dee5;overflow:auto;padding:12px}.hint{font-size:12px;color:#94a3b8;text-align:center;margin-top:25px}.thumb{background:white;margin-bottom:12px;padding:5px;border:2px solid transparent;border-radius:7px;cursor:pointer}.thumb.active{border-color:#2563eb}.thumb canvas{width:100%;display:block}.thumb div{text-align:center;font-size:11px;margin-top:4px}#workspace{flex:1;overflow:auto;position:relative;padding:30px}#welcome{height:100%;display:grid;place-items:center}.drop{background:#fff;border:2px dashed #bdc7d4;border-radius:18px;text-align:center;padding:55px 80px;box-shadow:0 8px 30px #0000000a}.drop h2{margin:10px}.drop p{color:#64748b}.drop small{display:block;color:#94a3b8;margin-top:18px}.page{position:relative;margin:0 auto 28px;background:#fff;box-shadow:0 3px 15px #0002;transform-origin:top center}.page>canvas{display:block}.overlay{position:absolute;inset:0;cursor:crosshair}.obj{position:absolute;border:1px dashed transparent;user-select:none}.obj.selected{border-color:#2563eb}.redact{background:#111}.erase{background:#fff}.textobj{background:transparent;padding:2px;color:#111;white-space:pre}.signature{object-fit:contain}.modal{position:fixed;inset:0;background:#0007;display:grid;place-items:center;z-index:20}.hidden{display:none}.dialog{background:white;padding:22px;border-radius:16px;width:min(600px,92vw)}#signPad{width:100%;height:220px;border:1px solid #ccd3dc;border-radius:10px;touch-action:none}.row{display:flex;justify-content:flex-end;gap:8px;margin-top:12px}@media(max-width:700px){aside{display:none}#workspace{padding:15px}.actions .ghost{display:none}.brand span{display:none}.drop{padding:40px 20px;width:94vw}header{padding:0 10px}.actions button{padding:8px}.toolbar{padding-left:8px}}
 .tool-icon{display:inline-flex;width:18px;height:18px;align-items:center;justify-content:center;font-size:17px;font-weight:600;line-height:1;color:currentColor;vertical-align:-2px;margin-right:4px}.text-icon{font-family:Georgia,serif;font-weight:700}.redact-icon{width:16px;height:10px;background:currentColor;border-radius:2px}.erase-icon{font-size:19px;font-weight:400}.toolbar button{display:inline-flex;align-items:center;gap:3px}
+
+/* Minimal mobile toolbar */
+.toolbar{height:54px;padding:6px 10px;gap:4px;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.toolbar::-webkit-scrollbar{display:none}
+.toolbar>button{flex:0 0 auto;border:0;background:transparent;border-radius:8px;padding:8px 10px;gap:5px}
+.toolbar>button.active{background:#eef4ff;border:0;color:#2563eb}
+.toolbar .tool-icon{margin:0;width:17px;height:17px;font-size:16px}
+.zoom{display:flex;align-items:center;flex:0 0 auto;margin-left:4px;border-left:1px solid #e5e7eb;padding-left:6px}
+.zoom button{border:0;padding:7px 9px;background:transparent}
+.zoom span{min-width:42px;text-align:center;font-size:14px}
+.overlay{touch-action:none}
+.redact.obj{outline:1px solid #2563eb;outline-offset:1px}
+@media(max-width:700px){
+ header{height:58px}.brand{font-size:18px}.brand span{display:inline}
+ .actions{gap:5px}.actions button{padding:8px 10px;font-size:14px}
+ .toolbar{height:52px}
+ .toolbar>button{padding:7px 9px;font-size:14px}
+ main{height:calc(100vh - 110px)}
+ #workspace{padding:10px;overflow:auto}
+ .page{margin-bottom:18px}
+}
