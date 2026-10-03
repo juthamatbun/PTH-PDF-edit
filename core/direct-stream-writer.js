@@ -25,6 +25,28 @@ function fontMaps(page,PDFLib){
 }
 function refs(page,PDFLib){const {PDFArray,PDFRawStream}=PDFLib,raw=page.node.Contents?.();if(!raw)return[];const a=raw instanceof PDFArray?raw.asArray():[raw];return a.map(x=>({ref:x,stream:page.doc.context.lookup(x)})).filter(x=>x.stream instanceof PDFRawStream)}
 function literal(src,oldText,newText){const a=esc(oldText),b=esc(newText);let done=false;const text=src.replace(/\((?:\\.|[^\\)])*\)(?=\s*Tj)/gs,t=>{if(done||!t.includes(a))return t;done=true;return t.replace(a,b)});return{text,done}}
+function simpleHex(src,oldText,newText){
+ let done=false;
+ const text=src.replace(/<([0-9A-Fa-f]+)>\s*Tj/g,(all,h)=>{
+  if(done||h.length%2)return all;
+  let decoded='';for(let i=0;i<h.length;i+=2)decoded+=String.fromCharCode(parseInt(h.slice(i,i+2),16));
+  if(!decoded.includes(oldText))return all;
+  const changed=decoded.replace(oldText,newText);
+  if([...changed].some(ch=>ch.charCodeAt(0)>255))return all;
+  done=true;return '<'+hex(u8(changed))+'> Tj';
+ });
+ return {text,done};
+}
+function literalTJ(src,oldText,newText){
+ let done=false;
+ const text=src.replace(/\[(.*?)\]\s*TJ/gs,(all,body)=>{
+  if(done)return all;
+  const parts=[...body.matchAll(/\((?:\\.|[^\\)])*\)/g)];
+  for(const p of parts){const raw=p[0].slice(1,-1);if(raw.includes(esc(oldText))){done=true;return all.replace(p[0],'('+raw.replace(esc(oldText),esc(newText))+')')}}
+  return all;
+ });
+ return {text,done};
+}
 function cid(src,oldText,newText,maps){
  let current=null,done=false,out='',last=0;
  const token=/(\/[^\s]+)\s+[+-]?(?:\d+\.?\d*|\.\d+)\s+Tf|<([0-9A-Fa-f]+)>\s*Tj/g; let m;
@@ -35,7 +57,7 @@ export function rewritePageLiteralEdits(doc,pageIndex,edits){
  const page=doc.getPage(pageIndex),streams=refs(page,PDFLib),maps=fontMaps(page,PDFLib),pending=edits.map(e=>({...e,done:false}));
  if(!streams.length)return{ok:false,reason:'No editable page content stream',failed:pending};
  for(const entry of streams){let src;try{src=l1(PDFLib.decodePDFRawStream(entry.stream).decode())}catch(_){continue}let next=src,touched=false;
-  for(const e of pending.filter(x=>!x.done)){let r=literal(next,e.oldText,e.newText||'');if(!r.done)r=cid(next,e.oldText,e.newText||'',maps);if(r.done){next=r.text;e.done=true;touched=true}}
+  for(const e of pending.filter(x=>!x.done)){let r=literal(next,e.oldText,e.newText||'');if(!r.done)r=literalTJ(next,e.oldText,e.newText||'');if(!r.done)r=cid(next,e.oldText,e.newText||'',maps);if(!r.done)r=simpleHex(next,e.oldText,e.newText||'');if(r.done){next=r.text;e.done=true;touched=true}}
   if(touched)doc.context.assign(entry.ref,doc.context.flateStream(u8(next)));
  }
  const failed=pending.filter(x=>!x.done);return{ok:failed.length===0,changed:pending.length-failed.length,failed,reason:failed.length?'Unsupported encoding, fragmented text, missing glyph, or nested Form XObject':'ok'};
