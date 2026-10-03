@@ -28,8 +28,14 @@ file.onchange=async()=>{if(!file.files?.[0])return;try{
 }catch(e){alert('Could not open this PDF: '+e.message)}};
 async function render(){
  pagesEl.innerHTML='';thumbs.innerHTML='';
- for(let n=1;n<=pdf.numPages;n++){
-  const p=await pdf.getPage(n),vp=p.getViewport({scale:1.35*zoom}),wrap=document.createElement('div');wrap.className='page';wrap.dataset.page=n;Object.assign(wrap.style,{width:vp.width+'px',height:vp.height+'px'});
+ let viewPdf=pdf;
+ const directObjects=objects.filter(o=>o.directEdit);
+ if(directObjects.length){
+   const preview=await exportPPDF(bytes,directObjects);
+   if(preview.ok){try{viewPdf=await pdfjsLib.getDocument({data:preview.bytes.slice(0)}).promise}catch(_){}}
+ }
+ for(let n=1;n<=viewPdf.numPages;n++){
+  const p=await viewPdf.getPage(n),vp=p.getViewport({scale:1.35*zoom}),wrap=document.createElement('div');wrap.className='page';wrap.dataset.page=n;Object.assign(wrap.style,{width:vp.width+'px',height:vp.height+'px'});
   const canvas=document.createElement('canvas');canvas.width=Math.ceil(vp.width);canvas.height=Math.ceil(vp.height);wrap.append(canvas);
   const ov=document.createElement('div');ov.className='overlay';wrap.append(ov);pagesEl.append(wrap);await p.render({canvasContext:canvas.getContext('2d'),viewport:vp}).promise;
   buildWordLayer(ov,n,vp,canvas);drawObjects(ov,n,vp);bindFreeArea(ov,n,vp,canvas);
@@ -65,7 +71,7 @@ function drawObjects(ov,page,vp){
  for(const o of objects.filter(x=>x.page===page)){
   const el=document.createElement(o.type==='sign'?'img':'div');el.className='obj '+o.type+(selected?.id===o.id?' selected':'');let x=o.x*vp.width,y=o.y*vp.height,w=Math.max(4,Math.abs(o.w)*vp.width),h=Math.max(4,Math.abs(o.h)*vp.height);
   Object.assign(el.style,{left:x+'px',top:y+'px',width:w+'px',height:h+'px',zIndex:10});
-  if(o.type==='replace'){el.textContent=o.text;Object.assign(el.style,{background:o.bg,fontSize:(o.size*1.35*zoom)+'px',color:o.textColor||'#111',whiteSpace:'nowrap',display:'flex',alignItems:'center',overflow:'visible',padding:'0 1px'})}
+  if(o.type==='replace'){el.textContent=o.text;Object.assign(el.style,{background:'transparent',fontSize:(o.size*1.35*zoom)+'px',color:'transparent',whiteSpace:'nowrap',display:'flex',alignItems:'center',overflow:'visible',padding:'0 1px',border:'1px dashed rgba(37,99,235,.45)'})}
   if(o.type==='erase')el.style.background=o.bg;if(o.type==='redact')el.style.background=o.fill||'#111';if(o.type==='sign')el.src=o.data;
   let drag=null;el.onpointerdown=e=>{if(tool!=='select')return;e.preventDefault();e.stopPropagation();setSelected(o);drag={x:e.clientX,y:e.clientY,ox:o.x,oy:o.y};el.setPointerCapture(e.pointerId);el.classList.add('selected')};
   el.onpointermove=e=>{if(!drag)return;const r=ov.getBoundingClientRect();o.x=Math.max(0,Math.min(1-o.w,drag.ox+(e.clientX-drag.x)/r.width));o.y=Math.max(0,Math.min(1-o.h,drag.oy+(e.clientY-drag.y)/r.height));el.style.left=o.x*vp.width+'px';el.style.top=o.y*vp.height+'px'};
