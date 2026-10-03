@@ -1,6 +1,6 @@
 import * as pdfjsLib from 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.min.mjs';
 import { PPDFDocumentModel } from './core/document-model.js';
-import { parseTextItems } from './core/content-parser.js';
+import { parseTextItems, parseOperatorList, linkRunsToOperators } from './core/content-parser.js';
 import { replacementMetrics } from './core/layout-engine.js';
 pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.worker.min.mjs';
 const $=s=>document.querySelector(s), pagesEl=$('#pages'), thumbs=$('#thumbs'), file=$('#file');
@@ -21,7 +21,7 @@ function splitWords(item,vp){
 function setSelected(o){selected=o;$('#objectBar').classList.toggle('hidden',!o);if(o){$('#fontSize').value=Math.round(o.size||16);if((o.textColor||'').startsWith('#'))$('#textColor').value=o.textColor}}
 file.onchange=async()=>{if(!file.files?.[0])return;try{
  bytes=await file.files[0].arrayBuffer();pdf=await pdfjsLib.getDocument({data:bytes.slice(0)}).promise;objects=[];history=[];pageModels={};contentModel=new PPDFDocumentModel();setSelected(null);
- for(let n=1;n<=pdf.numPages;n++){const p=await pdf.getPage(n),tc=await p.getTextContent({disableCombineTextItems:false});const runs=parseTextItems(tc.items);contentModel.setPage(n,{number:n,runs});pageModels[n]={items:tc.items.filter(x=>x.str?.trim()),runs}}
+ for(let n=1;n<=pdf.numPages;n++){const p=await pdf.getPage(n),tc=await p.getTextContent({disableCombineTextItems:false});let runs=parseTextItems(tc.items);const opList=await p.getOperatorList();const operators=parseOperatorList(opList,pdfjsLib.OPS);runs=linkRunsToOperators(runs,operators);contentModel.setPage(n,{number:n,runs,operators});pageModels[n]={items:tc.items.filter(x=>x.str?.trim()),runs,operators}}
  $('#welcome').style.display='none';$('#downloadBtn').disabled=false;await render();
 }catch(e){alert('Could not open this PDF: '+e.message)}};
 async function render(){
