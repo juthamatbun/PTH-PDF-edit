@@ -112,3 +112,10 @@ main{height:calc(100vh - 200px)}#workspace{padding:132px 14%;background:#f6f8fb}
 .page canvas{pointer-events:none!important}
 .overlay{pointer-events:auto!important}
 .pdftext,[class*="textLayer"],.textLayer{display:none!important;pointer-events:none!important}
+
+/* Native iOS file picker: input remains real and label triggers it */
+#file{position:fixed!important;left:-10000px!important;top:0!important;width:1px!important;height:1px!important;opacity:.01!important;display:block!important}
+.fileBtn{cursor:pointer;user-select:none;-webkit-user-select:none}
+#openBtn.fileBtn{display:inline-flex;align-items:center;justify-content:center;height:62px;border-radius:14px;padding:0 28px;font-size:18px;background:#fff;color:#172033;border:1px solid #dbe1ea}
+#welcomeOpen.fileBtn{height:66px;padding:0 34px;border-radius:14px;font-size:21px;font-weight:600;display:inline-flex;align-items:center;gap:14px;background:#2563eb;color:#fff;border:1px solid #2563eb}
+@media(max-width:700px){#openBtn.fileBtn{height:40px;padding:0 10px;font-size:13px;border-radius:10px}#welcomeOpen.fileBtn{height:56px;font-size:18px}}
