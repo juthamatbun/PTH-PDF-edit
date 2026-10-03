@@ -2,7 +2,15 @@ import * as pdfjsLib from 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38
 pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.worker.min.mjs';
 const $=s=>document.querySelector(s), pagesEl=$('#pages'), thumbs=$('#thumbs'), file=$('#file');
 let pdf=null, bytes=null, zoom=1, tool='select', objects=[], undo=[], signature=null, textItems={}, selected=null;
-const open=()=>file.click(); $('#openBtn').onclick=open; $('#welcomeOpen').onclick=open;
+function openPicker(e){
+  if(e){e.preventDefault();e.stopPropagation()}
+  file.value='';
+  if(typeof file.showPicker==='function'){ try{ file.showPicker(); return; }catch(_){} }
+  file.click();
+}
+$('#openBtn').addEventListener('click',openPicker);
+$('#welcomeOpen').addEventListener('click',openPicker);
+document.querySelector('.drop')?.addEventListener('click',e=>{ if(e.target.closest('button'))return; openPicker(e); });
 
 function rgbCss(a){return `rgb(${a[0]},${a[1]},${a[2]})`}
 function sampleBackground(canvas,x,y,w=1,h=1){
