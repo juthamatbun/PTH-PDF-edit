@@ -14,6 +14,7 @@ const bgSample=(canvas,b)=>{
  const m=[0,1,2].map(k=>Math.round(cs.reduce((a,c)=>a+c[k],0)/cs.length));return `rgb(${m.join(',')})`;
 };
 function boxFor(it,vp){const t=pdfjsLib.Util.transform(vp.transform,it.transform),h=Math.max(7,Math.hypot(t[2],t[3]));return{x:t[4],y:t[5]-h*.88,w:Math.max(4,it.width*vp.scale),h:h*1.08,font:h}}
+function runForItem(page,item){const runs=pageModels[page]?.runs||[];return runs.find(r=>r.sourceIndex===pageModels[page].items.indexOf(item))||runs.find(r=>r.text===item.str)||null}
 function splitWords(item,vp){
  const full=item.str||'', base=boxFor(item,vp), parts=[...full.matchAll(/\S+/g)]; if(!parts.length)return[];
  return parts.map(m=>{const before=full.slice(0,m.index),ratioStart=before.length/Math.max(1,full.length),ratioW=m[0].length/Math.max(1,full.length);return{...base,x:base.x+base.w*ratioStart,w:Math.max(5,base.w*ratioW),text:m[0],item}});
@@ -41,9 +42,9 @@ function buildWordLayer(ov,page,vp,canvas){
   const hit=document.createElement('div');hit.className='word-hit';hit.dataset.word=b.text;Object.assign(hit.style,{left:b.x+'px',top:b.y+'px',width:b.w+'px',height:b.h+'px'});
   hit.onpointerdown=e=>{e.preventDefault();e.stopPropagation();if(tool==='select')return;
    snapshot();const bg=bgSample(canvas,b),base={id:uid(),page,x:b.x/vp.width,y:b.y/vp.height,w:b.w/vp.width,h:b.h/vp.height,bg,source:b.text};
-   if(tool==='text'){const v=prompt('Edit text',b.text);if(v===null){history.pop();return}const run=(pageModels[page].runs||[]).find(r=>r.text.includes(b.text));if(run){const metrics=replacementMetrics(run,v);contentModel.replaceText({page,runId:run.id,sourceIndex:run.sourceIndex},v);base.contentRef={page,runId:run.id,sourceIndex:run.sourceIndex};base.metrics=metrics}objects.push({...base,type:'replace',text:v,size:Math.max(8,b.font/(1.35*zoom)),textColor:'#111111'})}
-   if(tool==='erase')objects.push({...base,type:'erase'});
-   if(tool==='redact')objects.push({...base,type:'redact',fill:bg});
+   if(tool==='text'){const v=prompt('Edit text',b.text);if(v===null){history.pop();return}const run=runForItem(page,b.item);if(run){const metrics=replacementMetrics(run,v);contentModel.replaceText({page,runId:run.id,sourceIndex:run.sourceIndex},v);base.contentRef={page,runId:run.id,sourceIndex:run.sourceIndex};base.metrics=metrics}objects.push({...base,type:'replace',text:v,size:Math.max(8,b.font/(1.35*zoom)),textColor:'#111111'})}
+   if(tool==='erase'){const run=runForItem(page,b.item);if(run){contentModel.deleteText({page,runId:run.id,sourceIndex:run.sourceIndex});base.contentRef={page,runId:run.id,sourceIndex:run.sourceIndex}}objects.push({...base,type:'erase'});}
+   if(tool==='redact'){const run=runForItem(page,b.item);if(run){contentModel.deleteText({page,runId:run.id,sourceIndex:run.sourceIndex});base.contentRef={page,runId:run.id,sourceIndex:run.sourceIndex}}objects.push({...base,type:'redact',fill:bg});}
    render();
   };ov.append(hit);
  }
@@ -76,7 +77,7 @@ $('#undoBtn').onclick=()=>{if(history.length){objects=JSON.parse(history.pop());
 $('#zoomIn').onclick=()=>{zoom=Math.min(2,zoom+.15);$('#zoomLabel').textContent=Math.round(zoom*100)+'%';render()};$('#zoomOut').onclick=()=>{zoom=Math.max(.55,zoom-.15);$('#zoomLabel').textContent=Math.round(zoom*100)+'%';render()};
 $('#fontSize').onchange=e=>{if(selected?.type==='replace'){snapshot();selected.size=Math.max(8,Math.min(72,+e.target.value||16));render()}};
 $('#textColor').oninput=e=>{if(selected?.type==='replace'){selected.textColor=e.target.value;render()}else if(selected?.type==='redact'){selected.fill=e.target.value;render()}};
-$('#deleteSelected').onclick=()=>{if(selected){snapshot();objects=objects.filter(x=>x.id!==selected.id);setSelected(null);render()}};
+$('#deleteSelected').onclick=()=>{if(selected){snapshot();if(selected.contentRef)contentModel.removeEdit(selected.contentRef);objects=objects.filter(x=>x.id!==selected.id);setSelected(null);render()}};
 function openSign(done){const m=$('#signModal'),c=$('#signPad'),ctx=c.getContext('2d');m.classList.remove('hidden');ctx.clearRect(0,0,c.width,c.height);let d=false;const pos=e=>{const r=c.getBoundingClientRect();return[(e.clientX-r.left)*c.width/r.width,(e.clientY-r.top)*c.height/r.height]};c.onpointerdown=e=>{d=true;ctx.beginPath();ctx.moveTo(...pos(e));c.setPointerCapture(e.pointerId)};c.onpointermove=e=>{if(d){ctx.lineWidth=3;ctx.lineCap='round';ctx.lineTo(...pos(e));ctx.stroke()}};c.onpointerup=()=>d=false;$('#clearSign').onclick=()=>ctx.clearRect(0,0,c.width,c.height);$('#cancelSign').onclick=()=>m.classList.add('hidden');$('#useSign').onclick=()=>{signature=c.toDataURL();m.classList.add('hidden');done()}}
 $('#downloadBtn').onclick=async()=>{const {PDFDocument,rgb,StandardFonts}=PDFLib,doc=await PDFDocument.load(bytes.slice(0)),font=await doc.embedFont(StandardFonts.Helvetica),color=v=>{if(v?.[0]==='#'){const q=v.slice(1);return rgb(parseInt(q.slice(0,2),16)/255,parseInt(q.slice(2,4),16)/255,parseInt(q.slice(4,6),16)/255)}const m=(v||'255,255,255').match(/\d+/g)||[255,255,255];return rgb(+m[0]/255,+m[1]/255,+m[2]/255)};
  for(const o of objects){const p=doc.getPage(o.page-1),{width,height}=p.getSize(),x=o.x*width,h=o.h*height,w=o.w*width,y=height-o.y*height-h;if(o.type==='replace'){p.drawRectangle({x,y,width:w,height:h,color:color(o.bg)});p.drawText(o.text,{x:x+1,y:y+Math.max(1,(h-o.size)*.4),size:o.size,font,color:color(o.textColor)})}if(o.type==='erase')p.drawRectangle({x,y,width:w,height:h,color:color(o.bg)});if(o.type==='redact')p.drawRectangle({x,y,width:w,height:h,color:color(o.fill||'#111111')});if(o.type==='sign'){const im=await doc.embedPng(o.data);p.drawImage(im,{x,y,width:w,height:h})}}
