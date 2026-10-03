@@ -9,39 +9,7 @@ async function render(){pagesEl.innerHTML='';thumbs.innerHTML=''; for(let n=1;n<
 const tv=p.getViewport({scale:.22});const tc=document.createElement('canvas');tc.width=tv.width;tc.height=tv.height;await p.render({canvasContext:tc.getContext('2d'),viewport:tv}).promise;const t=document.createElement('div');t.className='thumb';t.append(tc);t.insertAdjacentHTML('beforeend',`<div>Page ${n}</div>`);t.onclick=()=>wrap.scrollIntoView({behavior:'smooth',block:'start'});thumbs.append(t)}}
 function saveUndo(){undo.push(JSON.stringify(objects));if(undo.length>30)undo.shift()}
 function bindOverlay(ov,page,vp){let sx,sy,temp; ov.onpointerdown=e=>{if(tool==='select')return; const r=ov.getBoundingClientRect();sx=e.clientX-r.left;sy=e.clientY-r.top;if(tool==='text'){saveUndo();temp={type:'replaceText',page,x:sx/vp.width,y:sy/vp.height,w:0,h:0,text:'',size:14,bg:'#ffffff',pending:true};objects.push(temp);ov.setPointerCapture(e.pointerId);return} if(tool==='sign'){openSign(()=>{saveUndo();objects.push({type:'sign',page,x:sx/vp.width,y:sy/vp.height,w:.25,h:.08,data:signature});render()});return} if(tool==='erase'){saveUndo();temp={type:'eraseArea',page,x:sx/vp.width,y:sy/vp.height,w:0,h:0,bg:'#ffffff'};objects.push(temp);ov.setPointerCapture(e.pointerId);return} if(tool==='redact'){const cv=ov.previousElementSibling;sampledColor=sampleBackground(cv,sx,sy,1,1)} saveUndo();temp={type:tool,page,x:sx/vp.width,y:sy/vp.height,w:0,h:0,color:tool==='redact'?sampledColor:null};objects.push(temp);ov.setPointerCapture(e.pointerId)}; ov.onpointermove=e=>{if(!temp)return;const r=ov.getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top;temp.w=(x-sx)/vp.width;temp.h=(y-sy)/vp.height;drawObjects(ov,page,vp)};ov.onpointerup=()=>{if(temp){if(temp.w<0){temp.x+=temp.w;temp.w=Math.abs(temp.w)}if(temp.h<0){temp.y+=temp.h;temp.h=Math.abs(temp.h)}if(Math.abs(temp.w)<.005||Math.abs(temp.h)<.005){objects.pop();temp=null;render();return}if(temp.type==='eraseArea'){const cv=ov.previousElementSibling;temp.bg=sampleBackground(cv,temp.x*vp.width,temp.y*vp.height,temp.w*vp.width,temp.h*vp.height)}if(temp.type==='replaceText'&&temp.pending){const cv=ov.previousElementSibling;temp.bg=sampleBackground(cv,temp.x*vp.width,temp.y*vp.height,temp.w*vp.width,temp.h*vp.height)const txt=prompt('Replace with');if(txt===null){objects.splice(objects.indexOf(temp),1)}else{temp.text=txt;temp.size=Math.max(8,Math.min(32,temp.h*vp.height*.72/zoom));temp.pending=false}}temp=null;render()}}}
-function drawPdfText(ov,page,vp,p){
- const base=p.getViewport({scale:1}),sx=vp.width/base.width,sy=vp.height/base.height;
- const items=(textItems[page]||[]).filter(t=>t.str.trim());
- const lines=[];
- items.forEach(t=>{
-   let line=lines.find(l=>Math.abs(l.y-t.y)<=Math.max(3,t.h*.45));
-   if(!line){line={y:t.y,items:[]};lines.push(line)}
-   line.items.push(t);
- });
- lines.forEach(line=>{
-   line.items.sort((a,b)=>a.x-b.x);
-   const x0=Math.min(...line.items.map(t=>t.x)), x1=Math.max(...line.items.map(t=>t.x+t.w));
-   const h=Math.max(...line.items.map(t=>t.h)), y=Math.min(...line.items.map(t=>t.y));
-   const original=line.items.map(t=>t.str).join(' ').replace(/\s+/g,' ').trim();
-   if(!original)return;
-   const d=document.createElement('div');d.className='pdftext';d.textContent=original;d.title='Tap to edit this line';
-   Object.assign(d.style,{position:'absolute',left:(x0*sx)+'px',top:(vp.height-(y+h)*sy)+'px',width:Math.max(12,(x1-x0)*sx)+'px',height:Math.max(14,h*sy*1.25)+'px',cursor:'text',color:'transparent',border:'1px solid transparent',zIndex:'3'});
-   d.onclick=e=>{
-     if(tool==='erase'){e.stopPropagation();return}
-     if(tool!=='select')return;return;e.stopPropagation();
-     const val=prompt('Edit text',original);if(val===null||val===original)return;
-     saveUndo();
-     const cv=ov.previousElementSibling,ctx=cv&&cv.getContext?cv.getContext('2d'):null;let bg='rgb(255,255,255)';
-     if(ctx){const px=Math.max(0,Math.min(cv.width-1,Math.round(x0*sx-2))),py=Math.max(0,Math.min(cv.height-1,Math.round(vp.height-(y+h)*sy-2)));const cd=ctx.getImageData(px,py,1,1).data;bg=`rgb(${cd[0]},${cd[1]},${cd[2]})`}
-     objects.push({type:'replaceText',page,x:Math.max(0,(x0-3)/base.width),y:Math.max(0,(base.height-y-h-3)/base.height),w:Math.min(1,(x1-x0+8)/base.width),h:Math.min(.12,(h+8)/base.height),text:val,size:h,bg});
-     line.items.forEach(t=>t.str='');render();
-   };
-   d.onmouseenter=()=>{if(tool==='select'){d.style.borderColor='#60a5fa';d.style.background='#dbeafe33'}};
-   d.onmouseleave=()=>{d.style.borderColor='transparent';d.style.background='transparent'};
-   ov.append(d);
- });
-}
-function selectObject(o){selected=o;document.querySelector('#objectBar').classList.toggle('hidden',!o);if(o){document.querySelector('#fontSize').value=Math.round(o.size||16);document.querySelector('#textColor').value=o.color||'#111111'}}
+function drawPdfText(){/* original PDF text is intentionally not selectable */}
 function drawObjects(ov,page,vp){ov.querySelectorAll('.obj').forEach(x=>x.remove());objects.filter(o=>o.page===page).forEach((o,i)=>{const d=document.createElement(o.type==='sign'?'img':'div');d.className='obj '+(o.type==='redact'?'redact':(o.type==='text'||o.type==='replaceText')?'textobj':o.type==='sign'?'signature':'');if(o.type==='eraseArea')d.style.background=o.bg||'#fff';let x=o.x*vp.width,y=o.y*vp.height,w=(o.w||.2)*vp.width,h=(o.h||.04)*vp.height;if(w<0){x+=w;w=-w}if(h<0){y+=h;h=-h}Object.assign(d.style,{left:x+'px',top:y+'px',width:Math.max(w,3)+'px',height:Math.max(h,3)+'px'});if(o.type==='redact')d.style.background=o.color||'#fff';if(o.type==='eraseArea')d.style.background=o.bg||'#fff';if(o.type==='text'||o.type==='replaceText'){d.textContent=o.text;d.ondblclick=()=>{const v=prompt('Edit text',o.text);if(v!==null){saveUndo();o.text=v;render()}};if(o.type==='replaceText'){d.style.background=o.bg||'#fff';d.style.zIndex='4';d.style.overflow='visible';d.style.padding='0 2px';d.style.display='flex';d.style.alignItems='center'}d.style.fontSize=Math.max(8,(o.size||16)*zoom)+'px';d.style.color=o.color||'#111111';if(o.type==='text'){d.style.width='auto';d.style.height='auto'}}if(o.type==='sign')d.src=o.data;if(o.type==='draw'){d.style.border='2px solid #111';d.style.borderRadius='50%'}let drag=null;
 d.onpointerdown=e=>{if(tool!=='select')return;e.stopPropagation();selectObject(o);d.classList.add('selected');const r=ov.getBoundingClientRect();drag={px:e.clientX,py:e.clientY,ox:o.x,oy:o.y};d.setPointerCapture(e.pointerId);d.classList.add('selected')};
 d.onpointermove=e=>{if(!drag)return;const r=ov.getBoundingClientRect();o.x=Math.max(0,Math.min(1-(Math.abs(o.w)||.02),drag.ox+(e.clientX-drag.px)/r.width));o.y=Math.max(0,Math.min(1-(Math.abs(o.h)||.02),drag.oy+(e.clientY-drag.py)/r.height));d.style.left=(o.x*vp.width)+'px';d.style.top=(o.y*vp.height)+'px'};
