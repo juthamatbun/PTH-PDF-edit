@@ -2,6 +2,7 @@ import * as pdfjsLib from 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38
 import { PPDFDocumentModel } from './core/document-model.js';
 import { parseTextItems, parseOperatorList, linkRunsToOperators } from './core/content-parser.js';
 import { replacementMetrics } from './core/layout-engine.js';
+import { rewritePageLiteralEdits } from './core/direct-stream-writer.js';
 pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.worker.min.mjs';
 const $=s=>document.querySelector(s), pagesEl=$('#pages'), thumbs=$('#thumbs'), file=$('#file');
 let pdf=null,bytes=null,zoom=1,tool='select',objects=[],history=[],selected=null,signature=null,pageModels={};
@@ -42,9 +43,9 @@ function buildWordLayer(ov,page,vp,canvas){
   const hit=document.createElement('div');hit.className='word-hit';hit.dataset.word=b.text;Object.assign(hit.style,{left:b.x+'px',top:b.y+'px',width:b.w+'px',height:b.h+'px'});
   hit.onpointerdown=e=>{e.preventDefault();e.stopPropagation();if(tool==='select')return;
    snapshot();const bg=bgSample(canvas,b),base={id:uid(),page,x:b.x/vp.width,y:b.y/vp.height,w:b.w/vp.width,h:b.h/vp.height,bg,source:b.text};
-   if(tool==='text'){const v=prompt('Edit text',b.text);if(v===null){history.pop();return}const run=runForItem(page,b.item);if(run){const metrics=replacementMetrics(run,v);contentModel.replaceText({page,runId:run.id,sourceIndex:run.sourceIndex},v);base.contentRef={page,runId:run.id,sourceIndex:run.sourceIndex};base.metrics=metrics}objects.push({...base,type:'replace',text:v,size:Math.max(8,b.font/(1.35*zoom)),textColor:'#111111'})}
-   if(tool==='erase'){const run=runForItem(page,b.item);if(run){contentModel.deleteText({page,runId:run.id,sourceIndex:run.sourceIndex});base.contentRef={page,runId:run.id,sourceIndex:run.sourceIndex}}objects.push({...base,type:'erase'});}
-   if(tool==='redact'){const run=runForItem(page,b.item);if(run){contentModel.deleteText({page,runId:run.id,sourceIndex:run.sourceIndex});base.contentRef={page,runId:run.id,sourceIndex:run.sourceIndex}}objects.push({...base,type:'redact',fill:bg});}
+   if(tool==='text'){const v=prompt('Edit text',b.text);if(v===null){history.pop();return}const run=runForItem(page,b.item);if(run){const metrics=replacementMetrics(run,v);contentModel.replaceText({page,runId:run.id,sourceIndex:run.sourceIndex},v);base.contentRef={page,runId:run.id,sourceIndex:run.sourceIndex};base.metrics=metrics;base.directEdit={oldText:b.text,newText:v}}objects.push({...base,type:'replace',text:v,size:Math.max(8,b.font/(1.35*zoom)),textColor:'#111111'})}
+   if(tool==='erase'){const run=runForItem(page,b.item);if(run){contentModel.deleteText({page,runId:run.id,sourceIndex:run.sourceIndex});base.contentRef={page,runId:run.id,sourceIndex:run.sourceIndex};base.directEdit={oldText:b.text,newText:''}}objects.push({...base,type:'erase'});}
+   if(tool==='redact'){const run=runForItem(page,b.item);if(run){contentModel.deleteText({page,runId:run.id,sourceIndex:run.sourceIndex});base.contentRef={page,runId:run.id,sourceIndex:run.sourceIndex};base.directEdit={oldText:b.text,newText:''}}objects.push({...base,type:'redact',fill:bg});}
    render();
   };ov.append(hit);
  }
