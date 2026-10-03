@@ -102,3 +102,13 @@ main{height:calc(100vh - 200px)}#workspace{padding:132px 14%;background:#f6f8fb}
 .pdftext{display:none!important;pointer-events:none!important}
 .overlay{user-select:none;-webkit-user-select:none}
 .obj{user-select:none;-webkit-user-select:none}
+
+/* hard-disable browser/PDF text selection on rendered pages */
+#pages,#pages *,.page,.page canvas,.overlay{
+  -webkit-user-select:none!important;
+  user-select:none!important;
+  -webkit-touch-callout:none!important;
+}
+.page canvas{pointer-events:none!important}
+.overlay{pointer-events:auto!important}
+.pdftext,[class*="textLayer"],.textLayer{display:none!important;pointer-events:none!important}
