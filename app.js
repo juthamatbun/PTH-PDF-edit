@@ -8,14 +8,14 @@ const $=s=>document.querySelector(s), pagesEl=$('#pages'), thumbs=$('#thumbs'), 
 let pdf=null,bytes=null,zoom=1,tool='select',objects=[],history=[],selected=null,signature=null,pageModels={};
 let contentModel=new PPDFDocumentModel();
 const uid=()=>crypto.randomUUID?.()||Math.random().toString(36).slice(2);
-const snapshot=()=>{history.push(JSON.stringify(objects));if(history.length>40)history.shift()};
+const snapshot=()=>{history.push(JSON.stringify({objects,edits:contentModel.edits}));if(history.length>40)history.shift()};
 const bgSample=(canvas,b)=>{
  const ctx=canvas.getContext('2d'),p=Math.max(3,Math.min(10,b.h*.3)),pts=[[b.x-p,b.y+b.h/2],[b.x+b.w+p,b.y+b.h/2],[b.x+b.w/2,b.y-p],[b.x+b.w/2,b.y+b.h+p]];
  const cs=pts.map(([x,y])=>{x=Math.max(0,Math.min(canvas.width-1,Math.round(x)));y=Math.max(0,Math.min(canvas.height-1,Math.round(y)));return [...ctx.getImageData(x,y,1,1).data].slice(0,3)});
  const m=[0,1,2].map(k=>Math.round(cs.reduce((a,c)=>a+c[k],0)/cs.length));return `rgb(${m.join(',')})`;
 };
 function boxFor(it,vp){const t=pdfjsLib.Util.transform(vp.transform,it.transform),h=Math.max(7,Math.hypot(t[2],t[3]));return{x:t[4],y:t[5]-h*.88,w:Math.max(4,it.width*vp.scale),h:h*1.08,font:h}}
-function runForItem(page,item){const runs=pageModels[page]?.runs||[];return runs.find(r=>r.sourceIndex===pageModels[page].items.indexOf(item))||runs.find(r=>r.text===item.str)||null}
+function runForItem(page,item){const m=pageModels[page],runs=m?.runs||[],idx=m?.allItems?.indexOf(item)??-1;return runs.find(r=>r.sourceIndex===idx)||runs.find(r=>r.text===item.str)||null}
 function splitWords(item,vp){
  const full=item.str||'', base=boxFor(item,vp), parts=[...full.matchAll(/\S+/g)]; if(!parts.length)return[];
  return parts.map(m=>{const before=full.slice(0,m.index),ratioStart=before.length/Math.max(1,full.length),ratioW=m[0].length/Math.max(1,full.length);return{...base,x:base.x+base.w*ratioStart,w:Math.max(5,base.w*ratioW),text:m[0],item,start:m.index,end:m.index+m[0].length}});
@@ -23,7 +23,7 @@ function splitWords(item,vp){
 function setSelected(o){selected=o;$('#objectBar').classList.toggle('hidden',!o);if(o){$('#fontSize').value=Math.round(o.size||16);if((o.textColor||'').startsWith('#'))$('#textColor').value=o.textColor}}
 file.onchange=async()=>{if(!file.files?.[0])return;try{
  bytes=await file.files[0].arrayBuffer();pdf=await pdfjsLib.getDocument({data:bytes.slice(0)}).promise;objects=[];history=[];pageModels={};contentModel=new PPDFDocumentModel();setSelected(null);
- for(let n=1;n<=pdf.numPages;n++){const p=await pdf.getPage(n),tc=await p.getTextContent({disableCombineTextItems:false});let runs=parseTextItems(tc.items);const opList=await p.getOperatorList();const operators=parseOperatorList(opList,pdfjsLib.OPS);runs=linkRunsToOperators(runs,operators);contentModel.setPage(n,{number:n,runs,operators});pageModels[n]={items:tc.items.filter(x=>x.str?.trim()),runs,operators}}
+ for(let n=1;n<=pdf.numPages;n++){const p=await pdf.getPage(n),tc=await p.getTextContent({disableCombineTextItems:false});let runs=parseTextItems(tc.items);const opList=await p.getOperatorList();const operators=parseOperatorList(opList,pdfjsLib.OPS);runs=linkRunsToOperators(runs,operators);contentModel.setPage(n,{number:n,runs,operators});pageModels[n]={allItems:tc.items,items:tc.items.filter(x=>x.str?.trim()),runs,operators}}
  $('#welcome').style.display='none';$('#downloadBtn').disabled=false;await render();
 }catch(e){alert('Could not open this PDF: '+e.message)}};
 async function render(){
@@ -80,7 +80,7 @@ function drawObjects(ov,page,vp){
  }
 }
 document.querySelectorAll('[data-tool]').forEach(b=>b.onclick=()=>{document.querySelectorAll('[data-tool]').forEach(x=>x.classList.remove('active'));b.classList.add('active');tool=b.dataset.tool;setSelected(null);if(pdf)render()});
-$('#undoBtn').onclick=()=>{if(history.length){objects=JSON.parse(history.pop());setSelected(null);render()}};
+$('#undoBtn').onclick=()=>{if(history.length){const h=JSON.parse(history.pop());objects=h.objects||[];contentModel.edits=h.edits||[];setSelected(null);render()}};
 $('#zoomIn').onclick=()=>{zoom=Math.min(2,zoom+.15);$('#zoomLabel').textContent=Math.round(zoom*100)+'%';render()};$('#zoomOut').onclick=()=>{zoom=Math.max(.55,zoom-.15);$('#zoomLabel').textContent=Math.round(zoom*100)+'%';render()};
 $('#fontSize').onchange=e=>{if(selected?.type==='replace'){snapshot();selected.size=Math.max(8,Math.min(72,+e.target.value||16));render()}};
 $('#textColor').oninput=e=>{if(selected?.type==='replace'){selected.textColor=e.target.value;render()}else if(selected?.type==='redact'){selected.fill=e.target.value;render()}};
