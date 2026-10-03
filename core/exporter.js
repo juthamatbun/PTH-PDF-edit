@@ -17,5 +17,5 @@ export async function exportPPDF(sourceBytes,objects){
   if(o.type==='erase'&&!o.directEdit)p.drawRectangle({x,y,width:w,height:h,color:color(o.bg||'#ffffff')});
   if(o.type==='sign'){const im=await doc.embedPng(o.data);p.drawImage(im,{x,y,width:w,height:h})}
  }
- return {ok:true,bytes:await doc.save()};
+ return {ok:true,bytes:await doc.save(),directEditCount:[...grouped.values()].reduce((n,a)=>n+a.length,0)};
 }
