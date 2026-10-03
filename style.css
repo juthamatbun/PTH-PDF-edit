@@ -78,3 +78,16 @@ main{height:calc(100vh - 200px)}#workspace{padding:132px 14%;background:#f6f8fb}
  #workspace{padding:12px 8px!important;overflow:auto!important}
  .page{max-width:none}
 }
+
+/* Free pan/scroll and draggable edit objects */
+#workspace{touch-action:pan-x pan-y;overscroll-behavior:contain}
+#pages{min-width:max-content}
+.page{touch-action:pan-x pan-y}
+.overlay{touch-action:pan-x pan-y}
+.obj{touch-action:none;cursor:move}
+.obj.selected{outline:2px solid #2563eb;outline-offset:2px}
+@media(max-width:700px){
+ #workspace{overflow:auto!important;-webkit-overflow-scrolling:touch!important}
+ #pages{min-width:max-content}
+ .page{margin-left:0;margin-right:18px}
+}
