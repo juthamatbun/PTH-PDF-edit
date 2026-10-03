@@ -1,0 +1,23 @@
+<!doctype html><meta charset="utf-8"><title>PPDF self test</title>
+<script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+<pre id="out">Running…</pre>
+<script type="module">
+import * as pdfjsLib from 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.min.mjs';
+import {exportPPDF} from './core/exporter.js';
+pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.worker.min.mjs';
+const out=document.querySelector('#out'),log=(ok,msg)=>out.textContent+=(ok?'\nPASS ':'\nFAIL ')+msg;
+try{
+ const d=await PDFLib.PDFDocument.create(),p=d.addPage([500,300]),font=await d.embedFont(PDFLib.StandardFonts.Helvetica);
+ p.drawText('WORK EXPERIENCE',{x:60,y:220,size:20,font});
+ p.drawText('Consolidate P&L, Balance Sheet, Cash Flow',{x:60,y:180,size:12,font});
+ const src=await d.save();
+ const objects=[{page:1,type:'replace',directEdit:{oldText:'WORK EXPERIENCE',newText:'WORK EXPERIENCE REV'},x:.1,y:.1,w:.3,h:.1}];
+ const r=await exportPPDF(src.buffer.slice(src.byteOffset,src.byteOffset+src.byteLength),objects);
+ log(r.ok,'writer accepted a literal Tj edit'); if(!r.ok)throw new Error(r.failed?.[0]?.reason||'writer rejected');
+ const v=await pdfjsLib.getDocument({data:r.bytes.slice(0)}).promise,tc=await (await v.getPage(1)).getTextContent(),text=tc.items.map(x=>x.str).join(' ');
+ log(text.includes('WORK EXPERIENCE REV'),'new text exists after reopening exported PDF');
+ log(!text.includes('WORK EXPERIENCE ')||text.includes('WORK EXPERIENCE REV'),'old standalone text was replaced');
+ log(r.directEditCount===1,'exactly one direct edit was exported');
+ out.textContent+='\n\nExtracted text: '+text;
+}catch(e){out.textContent+='\nERROR '+e.stack}
+</script>
