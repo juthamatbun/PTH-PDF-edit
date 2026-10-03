@@ -70,7 +70,7 @@ function drawObjects(ov,page,vp){
   let drag=null;el.onpointerdown=e=>{if(tool!=='select')return;e.preventDefault();e.stopPropagation();setSelected(o);drag={x:e.clientX,y:e.clientY,ox:o.x,oy:o.y};el.setPointerCapture(e.pointerId);el.classList.add('selected')};
   el.onpointermove=e=>{if(!drag)return;const r=ov.getBoundingClientRect();o.x=Math.max(0,Math.min(1-o.w,drag.ox+(e.clientX-drag.x)/r.width));o.y=Math.max(0,Math.min(1-o.h,drag.oy+(e.clientY-drag.y)/r.height));el.style.left=o.x*vp.width+'px';el.style.top=o.y*vp.height+'px'};
   el.onpointerup=()=>{if(drag){snapshot();drag=null}};
-  el.ondblclick=()=>{if(o.type==='replace'){const v=prompt('Edit text',o.text);if(v!==null){snapshot();o.text=v;render()}}};ov.append(el);
+  el.ondblclick=()=>{if(o.type==='replace'){const v=prompt('Edit text',o.text);if(v!==null){snapshot();o.text=v;if(o.directEdit)o.directEdit.newText=v;render()}}};ov.append(el);
  }
 }
 document.querySelectorAll('[data-tool]').forEach(b=>b.onclick=()=>{document.querySelectorAll('[data-tool]').forEach(x=>x.classList.remove('active'));b.classList.add('active');tool=b.dataset.tool;setSelected(null);if(pdf)render()});
@@ -83,6 +83,11 @@ function openSign(done){const m=$('#signModal'),c=$('#signPad'),ctx=c.getContext
 $('#downloadBtn').onclick=async()=>{
  const result=await exportPPDF(bytes,objects);
  if(!result.ok){alert('PPDF cannot safely edit the original text encoding on page '+result.failed.map(x=>x.page).join(', ')+'. Export stopped; no fake text overlay was used.');return}
+ const verify=await pdfjsLib.getDocument({data:result.bytes.slice(0)}).promise;
+ const pageText={};
+ for(let n=1;n<=verify.numPages;n++){const tc=await (await verify.getPage(n)).getTextContent();pageText[n]=tc.items.map(x=>x.str||'').join(' ')}
+ const bad=objects.filter(o=>o.directEdit).filter(o=>{const t=pageText[o.page]||'';return o.type==='replace'?!t.includes(o.directEdit.newText):t.includes(o.directEdit.oldText)});
+ if(bad.length){alert('PPDF stopped the export because verification failed. The saved PDF did not contain the expected text change.');return}
  const a=document.createElement('a'),url=URL.createObjectURL(new Blob([result.bytes],{type:'application/pdf'}));
  a.href=url;a.download='edited-document.pdf';a.click();setTimeout(()=>URL.revokeObjectURL(url),1500);
 };
