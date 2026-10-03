@@ -1,15 +1,15 @@
 <!doctype html><html lang='en'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>PPDF Editor</title><link rel='stylesheet' href='style.css'></head><body>
 <header><div class='brand'><b>PPDF</b><span> Editor</span></div><div class='actions'><button id='openBtn'>Open PDF</button><input id='file' type='file' accept='application/pdf' hidden><button id='undoBtn' class='ghost'>↶ Undo</button><button id='downloadBtn' class='primary' disabled>Download PDF</button></div></header>
 <div class='toolbar'>
-<button data-tool='select' class='active'><span class='tool-icon'>↖</span>Select</button>
-<button data-tool='text'><span class='tool-icon text-icon'>T</span>Text</button>
-<button data-tool='redact'><span class='tool-icon redact-icon'></span>Redact</button>
-<button data-tool='erase'><span class='tool-icon'>◇</span>Erase</button>
-<button data-tool='draw'><span class='tool-icon'>／</span>Draw</button>
-<button data-tool='sign'><span class='tool-icon'>〰</span>Signature</button>
+<button data-tool='select' class='active'><span class='ico cursor'></span><span>Select</span></button>
+<button data-tool='text'><span class='ico type'>T</span><span>Text</span></button>
+<button data-tool='redact'><span class='ico redact-square'></span><span>Redact</span></button>
+<button data-tool='erase'><span class='ico eraser'>◇</span><span>Erase</span></button>
+<button data-tool='draw'><span class='ico pen'>／</span><span>Draw</span></button>
+<button data-tool='sign'><span class='ico signature'>〰</span><span>Signature</span></button>
 <div class='zoom'><button id='zoomOut'>−</button><span id='zoomLabel'>100%</span><button id='zoomIn'>＋</button></div>
 </div>
-<main><aside id='thumbs'><div class='hint'>PDF pages<br>will appear here</div></aside><section id='workspace'><div id='welcome'><div class='drop'>📄<h2>Edit PDFs easily</h2><p>Add text • Redact information • Sign documents</p><button id='welcomeOpen'>Choose PDF</button><small>Your PDF is processed on your device</small></div></div><div id='pages'></div></section></main>
+<main><aside id='thumbs'><div class='hint'>PDF pages<br>will appear here</div></aside><section id='workspace'><div id='welcome'><div class='drop'><div class='file-outline'></div><h2>Edit PDFs easily</h2><p>Add text • Redact information • Sign documents</p><button id='welcomeOpen'><span class='folder-outline'></span>Choose PDF</button><small>Your PDF is processed on your device</small></div></div><div id='pages'></div></section></main>
 <div id='signModal' class='modal hidden'><div class='dialog'><h3>Create Signature</h3><canvas id='signPad' width='520' height='220'></canvas><div class='row'><button id='clearSign'>Clear</button><button id='cancelSign'>Cancel</button><button id='useSign' class='primary'>Use Signature</button></div></div></div>
 <script src='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.min.mjs' type='module'></script>
 <script src='https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js'></script>
