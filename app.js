@@ -68,7 +68,7 @@ function bindFreeArea(ov,page,vp,canvas){
  ov.onpointerup=()=>{if(!temp)return;if(temp.w<0){temp.x+=temp.w;temp.w=-temp.w}if(temp.h<0){temp.y+=temp.h;temp.h=-temp.h}const b={x:temp.x*vp.width,y:temp.y*vp.height,w:temp.w*vp.width,h:temp.h*vp.height};temp.bg=bgSample(canvas,b);if(temp.type==='erase')temp.fill=temp.bg;if(temp.w<.004||temp.h<.004)objects.pop();temp=null;render()};
 }
 function drawObjects(ov,page,vp){
- for(const o of objects.filter(x=>x.page===page)){
+ for(const o of objects.filter(x=>x.page===page && !x.directEdit)){
   const el=document.createElement(o.type==='sign'?'img':'div');el.className='obj '+o.type+(selected?.id===o.id?' selected':'');let x=o.x*vp.width,y=o.y*vp.height,w=Math.max(4,Math.abs(o.w)*vp.width),h=Math.max(4,Math.abs(o.h)*vp.height);
   Object.assign(el.style,{left:x+'px',top:y+'px',width:w+'px',height:h+'px',zIndex:10});
   if(o.type==='replace'){el.textContent='';Object.assign(el.style,{background:'transparent',color:'transparent',display:'block',border:selected?.id===o.id?'1px dashed rgba(37,99,235,.55)':'none'})}
