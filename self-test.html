@@ -16,7 +16,14 @@ try{
  log(r.ok,'writer accepted a literal Tj edit'); if(!r.ok)throw new Error(r.failed?.[0]?.reason||'writer rejected');
  const v=await pdfjsLib.getDocument({data:r.bytes.slice(0)}).promise,tc=await (await v.getPage(1)).getTextContent(),text=tc.items.map(x=>x.str).join(' ');
  log(text.includes('WORK EXPERIENCE REV'),'new text exists after reopening exported PDF');
- log(!text.includes('WORK EXPERIENCE ')||text.includes('WORK EXPERIENCE REV'),'old standalone text was replaced');
+ log(!tc.items.some(x=>x.str==='WORK EXPERIENCE'),'old standalone text is absent');
+ log(tc.items.filter(x=>x.str==='WORK EXPERIENCE REV').length===1,'replacement occurs exactly once');
+ const r2=await exportPPDF(src.buffer.slice(src.byteOffset,src.byteOffset+src.byteLength),[{page:1,type:'erase',directEdit:{oldText:'WORK EXPERIENCE',newText:''},x:.1,y:.1,w:.3,h:.1}]);
+ const v2=await pdfjsLib.getDocument({data:r2.bytes.slice(0)}).promise,tc2=await (await v2.getPage(1)).getTextContent();
+ log(r2.ok&&!tc2.items.some(x=>x.str==='WORK EXPERIENCE'),'delete removes original text after reopen');
+ const r3=await exportPPDF(src.buffer.slice(src.byteOffset,src.byteOffset+src.byteLength),[{page:1,type:'redact',directEdit:{oldText:'WORK EXPERIENCE',newText:''},x:.1,y:.1,w:.3,h:.1,fill:'#111111'}]);
+ const v3=await pdfjsLib.getDocument({data:r3.bytes.slice(0)}).promise,tc3=await (await v3.getPage(1)).getTextContent();
+ log(r3.ok&&!tc3.items.some(x=>x.str==='WORK EXPERIENCE'),'censor removes underlying searchable text after reopen');
  log(r.directEditCount===1,'exactly one direct edit was exported');
  out.textContent+='\n\nExtracted text: '+text;
 }catch(e){out.textContent+='\nERROR '+e.stack}
