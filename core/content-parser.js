@@ -2,11 +2,13 @@
 // Captures text-show operators and active font/transform state so edits can be
 // mapped back to actual PDF drawing operations instead of screen overlays.
 export function parseTextItems(items){
- return items.filter(i=>i.str?.length).map((i,index)=>({
+ const out=[];
+ items.forEach((i,index)=>{if(i.str?.length)out.push({
    id:'text-'+index,text:i.str,fontKey:i.fontName||null,
    transform:[...(i.transform||[])],width:i.width||0,height:i.height||0,
-   hasEOL:!!i.hasEOL, sourceIndex:index
- }));
+   hasEOL:!!i.hasEOL,sourceIndex:index
+ })});
+ return out;
 }
 
 export function parseOperatorList(opList, OPS){
