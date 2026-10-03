@@ -48,3 +48,12 @@ main{height:calc(100vh - 200px)}#workspace{padding:132px 14%;background:#f6f8fb}
  .ico{width:19px;height:19px;font-size:19px;margin-right:6px}.cursor:before{font-size:21px}.type{font-size:21px}.redact-square{width:16px;height:16px}.eraser,.pen{font-size:22px}.signature{font-size:24px}
  main{height:calc(100vh - 130px)}#workspace{padding:70px 20px}.drop{padding:54px 18px 58px}.drop h2{font-size:28px}.drop p{font-size:17px;line-height:1.5}#welcomeOpen{height:56px;font-size:18px}
 }
+
+/* Definitive reference styling - SVG icons */
+.toolbar svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none;margin-right:12px}
+.toolbar svg .fill{fill:currentColor;stroke:none}
+.file-svg{width:50px;height:60px;fill:none;stroke:#596273;stroke-width:3;stroke-linejoin:round}
+.folder-svg{width:26px;height:26px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linejoin:round}
+.toolbar>button{border:0!important;border-right:1px solid #e7eaf0!important;background:#fff!important}
+.toolbar>button.active{border-right:1px solid #e7eaf0!important;background:#eef4ff!important}
+@media(max-width:700px){.toolbar svg{width:20px;height:20px;margin-right:7px}.toolbar>button{padding:0 12px!important}}
